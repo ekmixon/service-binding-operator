@@ -27,24 +27,27 @@ class QuarkusApplication(object):
         return True
 
     def get_pod_name_running(self, pod_name_pattern, wait=False):
-        if wait:
-            pod_name = self.openshift.wait_for_pod(self.format_pattern(pod_name_pattern), self.namespace, timeout=500)
-        else:
-            pod_name = self.openshift.search_pod_in_namespace(self.format_pattern(pod_name_pattern), self.namespace)
-        return pod_name
+        return (
+            self.openshift.wait_for_pod(
+                self.format_pattern(pod_name_pattern), self.namespace, timeout=500
+            )
+            if wait
+            else self.openshift.search_pod_in_namespace(
+                self.format_pattern(pod_name_pattern), self.namespace
+            )
+        )
 
     def is_imported(self, wait=False, interval=5, timeout=600):
         deployment_name = self.openshift.get_deployment_name_in_namespace(
             self.format_pattern(self.deployment_name_pattern), self.namespace, wait=wait, timeout=timeout)
         if deployment_name is None:
             return False
-        else:
-            deployment_replicas = self.openshift.get_resource_info_by_jsonpath("deployment", deployment_name, self.namespace, "{.status.replicas}")
-            assert deployment_replicas.isnumeric(
-            ), f"Number of replicas of deployment '{deployment_name}' should be a numerical value, but is actually: '{deployment_replicas}"
-            assert int(str(deployment_replicas)) > 0, "Number of replicas of deployment '{deployment_name}' " + \
+        deployment_replicas = self.openshift.get_resource_info_by_jsonpath("deployment", deployment_name, self.namespace, "{.status.replicas}")
+        assert deployment_replicas.isnumeric(
+        ), f"Number of replicas of deployment '{deployment_name}' should be a numerical value, but is actually: '{deployment_replicas}"
+        assert int(str(deployment_replicas)) > 0, "Number of replicas of deployment '{deployment_name}' " + \
                 "should be greater than 0, but is actually: '{deployment_replicas}'."
-            return True
+        return True
 
     def get_response_from_api(self, endpoint, wait=False, interval=5, timeout=300):
         route_url = self.openshift.get_knative_route_host(self.name, self.namespace)

@@ -42,7 +42,7 @@ spec:
             pod_name = self.openshift.search_pod_in_namespace(self.pod_name_pattern.format(name=self.name), self.namespace)
         if pod_name is not None:
             pod_status = self.openshift.check_pod_status(pod_name, self.namespace)
-            print("The pod {} is running: {}".format(self.name, pod_status))
+            print(f"The pod {self.name} is running: {pod_status}")
             output, exit_code = self.cmd.run(f'{ctx.cli} get db {self.name} -n {self.namespace} -o jsonpath="{{.status.dbConnectionIP}}"')
             if exit_code == 0 and re.search(r'\d+\.\d+\.\d+\.\d+', output):
                 print(f"The DB {self.name} is up and listening at {output}.")

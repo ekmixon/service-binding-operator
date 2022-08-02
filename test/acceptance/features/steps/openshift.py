@@ -138,10 +138,10 @@ spec:
         print(f"Searching for {resource_plural} that matches {name_pattern} in {namespace} namespace")
         lst = self.get_resource_lst(resource_plural, namespace)
         if len(lst) != 0:
-            print("Resource list is {}".format(lst))
+            print(f"Resource list is {lst}")
             return self.search_item_in_lst(lst, name_pattern)
         else:
-            print('Resource list is empty under namespace - {}'.format(namespace))
+            print(f'Resource list is empty under namespace - {namespace}')
             return None
 
     def is_resource_in(self, resource_type, resource_name=None):
@@ -157,13 +157,12 @@ spec:
         start = 0
         if pod is not None:
             return pod
-        else:
-            while ((start + interval) <= timeout):
-                pod = self.search_pod_in_namespace(pod_name_pattern, namespace)
-                if pod is not None:
-                    return pod
-                time.sleep(interval)
-                start += interval
+        while ((start + interval) <= timeout):
+            pod = self.search_pod_in_namespace(pod_name_pattern, namespace)
+            if pod is not None:
+                return pod
+            time.sleep(interval)
+            start += interval
         return None
 
     def check_pod_status(self, pod_name, namespace, wait_for_status="Running"):
@@ -175,33 +174,22 @@ spec:
         cmd = f'{ctx.cli} get pod {pod_name} -n {namespace} -o "jsonpath={{.status.phase}}"'
         output, exit_status = self.cmd.run(cmd)
         print(f"Get pod status: {output}, {exit_status}")
-        if exit_status == 0:
-            return output
-        return None
+        return output if exit_status == 0 else None
 
     def apply(self, yaml, namespace=None):
-        if namespace is not None:
-            ns_arg = f"-n {namespace}"
-        else:
-            ns_arg = ""
+        ns_arg = f"-n {namespace}" if namespace is not None else ""
         (output, exit_code) = self.cmd.run(f"{ctx.cli} apply {ns_arg} -f -", yaml)
         assert exit_code == 0, f"Non-zero exit code ({exit_code}) while applying a YAML: {output}"
         return output
 
     def apply_invalid(self, yaml, namespace=None):
-        if namespace is not None:
-            ns_arg = f"-n {namespace}"
-        else:
-            ns_arg = ""
+        ns_arg = f"-n {namespace}" if namespace is not None else ""
         (output, exit_code) = self.cmd.run(f"{ctx.cli} apply {ns_arg} -f -", yaml)
         assert exit_code != 0, f"the command should fail but it did not, output: {output}"
         return output
 
     def delete(self, yaml, namespace=None):
-        if namespace is not None:
-            ns_arg = f"-n {namespace}"
-        else:
-            ns_arg = ""
+        ns_arg = f"-n {namespace}" if namespace is not None else ""
         (output, exit_code) = self.cmd.run(f"{ctx.cli} delete {ns_arg} -f -", yaml)
         assert exit_code == 0, f"Non-zero exit code ({exit_code}) while deleting a YAML: {output}"
         return output
@@ -227,13 +215,12 @@ spec:
         start = 0
         if current_csv is not None:
             return True
-        else:
-            while ((start + interval) <= timeout):
-                current_csv = self.get_current_csv(package_name, operator_source_name, operator_channel)
-                if current_csv is not None:
-                    return True
-                time.sleep(interval)
-                start += interval
+        while ((start + interval) <= timeout):
+            current_csv = self.get_current_csv(package_name, operator_source_name, operator_channel)
+            if current_csv is not None:
+                return True
+            time.sleep(interval)
+            start += interval
         return False
 
     def expose_service_route(self, name, namespace, port=""):
@@ -267,7 +254,7 @@ spec:
 
     def get_deployment_status(self, deployment_name, namespace, wait_for_status=None, interval=5, timeout=400):
         deployment_status_cmd = f'{ctx.cli} get deployment {deployment_name} -n {namespace} -o json' \
-            + ' | jq -rc \'.status.conditions[] | select(.type=="Available").status\''
+                + ' | jq -rc \'.status.conditions[] | select(.type=="Available").status\''
         output = None
         exit_code = -1
         if wait_for_status is not None:
@@ -296,13 +283,14 @@ spec:
         oc_cmd = f'{ctx.cli} get {resource_type} {name} -n {namespace} -o "jsonpath={json_path}"'
         output, exit_code = self.cmd.run(oc_cmd)
         if exit_code == 0:
-            if resource_type == "secrets":
-                return base64.decodebytes(bytes(output, 'utf-8')).decode('utf-8')
-            else:
-                return output
-        else:
-            print(f'Error getting value for {resource_type}/{name} in {namespace} path={json_path}: {output}')
-            return None
+            return (
+                base64.decodebytes(bytes(output, 'utf-8')).decode('utf-8')
+                if resource_type == "secrets"
+                else output
+            )
+
+        print(f'Error getting value for {resource_type}/{name} in {namespace} path={json_path}: {output}')
+        return None
 
     def get_json_resource(self, resource_type, name, namespace):
         error_msg = f"Error in getting resource: '{resource_type}' '{name}' namespace: '{namespace}'"
@@ -341,17 +329,16 @@ spec:
         return status_found, output
 
     def get_deployment_name_in_namespace(self, deployment_name_pattern, namespace, wait=False, interval=5, timeout=120):
-        if wait:
-            start = 0
-            while ((start + interval) <= timeout):
-                deployment = self.search_resource_in_namespace("deployment", deployment_name_pattern, namespace)
-                if deployment is not None:
-                    return deployment
-                time.sleep(interval)
-                start += interval
-            return None
-        else:
+        if not wait:
             return self.search_resource_in_namespace("deployment", deployment_name_pattern, namespace)
+        start = 0
+        while ((start + interval) <= timeout):
+            deployment = self.search_resource_in_namespace("deployment", deployment_name_pattern, namespace)
+            if deployment is not None:
+                return deployment
+            time.sleep(interval)
+            start += interval
+        return None
 
     def get_knative_route_host(self, name, namespace):
         cmd = f'{ctx.cli} get rt {name} -n {namespace} -o "jsonpath={{.status.url}}"'
@@ -366,8 +353,7 @@ spec:
         cmd = f'{ctx.cli} get rev {revision} -n {namespace} -o "jsonpath={{.status.conditions[*].status}}"'
         (output, exit_code) = self.cmd.run(cmd)
         assert exit_code == 0, f"cmd-{cmd} for getting last revision status is {output} with exit code not equal to 0"
-        last_revision_status = output.split(" ")[-1]
-        return last_revision_status
+        return output.split(" ")[-1]
 
     def create_operator_subscription_to_namespace(self, package_name, namespace, operator_source_name, channel):
         operator_subscription = self.operator_subscription_to_namespace_yaml_template.format(
@@ -382,10 +368,10 @@ spec:
         print(f"Searching for {resource_plural} that matches {name_pattern} in {namespace} namespace")
         lst = self.get_resource_lst(resource_plural, namespace)
         if len(lst) != 0:
-            print("Resource list is {}".format(lst))
+            print(f"Resource list is {lst}")
             return self.get_all_matched_pattern_from_lst(lst, name_pattern)
         else:
-            print('Resource list is empty under namespace - {}'.format(namespace))
+            print(f'Resource list is empty under namespace - {namespace}')
             return []
 
     def get_all_matched_pattern_from_lst(self, lst, search_pattern):
@@ -394,19 +380,18 @@ spec:
             if re.fullmatch(search_pattern, item) is not None:
                 print(f"item matched {item}")
                 output_arr.append(item)
-        if not output_arr:
-            print("Given item not matched from the list of pods")
-            return []
-        else:
+        if output_arr:
             return output_arr
+        print("Given item not matched from the list of pods")
+        return []
 
     def search_resource_lst_in_namespace(self, resource_plural, name_pattern, namespace):
         print(f"Searching for {resource_plural} that matches {name_pattern} in {namespace} namespace")
         lst = self.get_resource_list_in_namespace(resource_plural, name_pattern, namespace)
         if len(lst) != 0:
-            print("Resource list is {}".format(lst))
+            print(f"Resource list is {lst}")
             return lst
-        print('Resource list is empty under namespace - {}'.format(namespace))
+        print(f'Resource list is empty under namespace - {namespace}')
         return None
 
     def lookup_namespace_for_resource(self, resource_plural, name):
@@ -415,17 +400,11 @@ spec:
             + f" | jq -rc '.items[] | select(.metadata.name == \"{name}\").metadata.namespace'")
         assert code == 0, f"Non-zero return code while trying to detect namespace for {resource_plural} '{name}': {output}"
         output = str(output).strip()
-        if output != "":
-            return output
-        else:
-            return None
+        return output if output != "" else None
 
     def apply_yaml_file(self, yaml, namespace=None):
-        if namespace is not None:
-            ns_arg = f"-n {namespace}"
-        else:
-            ns_arg = ""
-        (output, exit_code) = self.cmd.run(f"{ctx.cli} apply {ns_arg} -f " + yaml)
+        ns_arg = f"-n {namespace}" if namespace is not None else ""
+        (output, exit_code) = self.cmd.run(f"{ctx.cli} apply {ns_arg} -f {yaml}")
         assert exit_code == 0, "Applying yaml file failed as the exit code is not 0"
         return output
 
@@ -446,7 +425,7 @@ spec:
                     for deployment in deployment_list:
                         result = self.get_deployment_envFrom_info(deployment, namespace)
                         if re.search(re.escape(expected_secretRef_oc_46), result) is not None or \
-                                re.search(re.escape(expected_secretRef_oc_45), result) is not None:
+                                    re.search(re.escape(expected_secretRef_oc_45), result) is not None:
                             return deployment
                         else:
                             print(
@@ -461,7 +440,10 @@ spec:
             if deployment_list is not None:
                 for deployment in deployment_list:
                     result = self.get_deployment_envFrom_info(deployment, namespace)
-                    if result == expected_secretRef_oc_46 or result == expected_secretRef_oc_45:
+                    if result in [
+                        expected_secretRef_oc_46,
+                        expected_secretRef_oc_45,
+                    ]:
                         return deployment
                     else:
                         print(
@@ -475,7 +457,7 @@ spec:
         if ctx.cli == "oc":
             cmd = f"{ctx.cli} new-app --docker-image={image_name} --name={name} -n {namespace}"
             if bindingRoot:
-                cmd = cmd + f" -e SERVICE_BINDING_ROOT={bindingRoot}"
+                cmd = f"{cmd} -e SERVICE_BINDING_ROOT={bindingRoot}"
             (output, exit_code) = self.cmd.run(cmd)
         else:
             cmd = f"{ctx.cli} create deployment {name} -n {namespace} --image={image_name}"

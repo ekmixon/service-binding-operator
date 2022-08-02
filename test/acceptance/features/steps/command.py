@@ -8,11 +8,7 @@ class Command(object):
     env = {}
 
     def __init__(self, path=None):
-        if path is None:
-            self.path = os.getcwd()
-        else:
-            self.path = path
-
+        self.path = os.getcwd() if path is None else path
         kubeconfig = os.getenv("KUBECONFIG")
         assert kubeconfig is not None, "KUBECONFIG needs to be set in the environment"
         self.setenv("KUBECONFIG", kubeconfig)

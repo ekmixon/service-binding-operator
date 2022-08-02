@@ -36,9 +36,7 @@ spec:
         if exit_code != 0:
             print(f"cmd-{cmd} result for getting available knative serving is {output} with the exit code {exit_code}")
             return False
-        if self.name in output:
-            return True
-        return False
+        return self.name in output
 
     def create(self):
         etcd_cluster_output = self.openshift.apply(self.etcd_cluster_template.format(etcd_cluster_name=self.name, namespace=self.namespace))

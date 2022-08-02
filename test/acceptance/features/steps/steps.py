@@ -30,9 +30,9 @@ from app import App
 def given_namespace_is_used(context, namespace_name):
     namespace = Namespace(namespace_name)
     if not namespace.is_present():
-        print("Namespace is not present, creating namespace: {}...".format(namespace_name))
+        print(f"Namespace is not present, creating namespace: {namespace_name}...")
         assert namespace.create(), f"Unable to create namespace '{namespace_name}'"
-    print("Namespace {} is created!!!".format(namespace_name))
+    print(f"Namespace {namespace_name} is created!!!")
     context.namespace = namespace
 
 
@@ -249,15 +249,18 @@ def quarkus_app_is_imported_as_knative_service(context, application_name):
 @given(u'OLM Operator "{backend_service}" is running')
 def operator_manifest_installed(context, backend_service=None):
     openshift = Openshift()
-    if "namespace" in context:
-        ns = context.namespace.name
-    else:
-        ns = None
-
+    ns = context.namespace.name if "namespace" in context else None
     if backend_service is None:
         _ = openshift.apply_yaml_file(os.path.join(os.getcwd(), "test/acceptance/resources/backend_crd.yaml"), namespace=ns)
     else:
-        _ = openshift.apply_yaml_file(os.path.join(os.getcwd(), "test/acceptance/resources/", backend_service + ".operator.manifest.yaml"), namespace=ns)
+        _ = openshift.apply_yaml_file(
+            os.path.join(
+                os.getcwd(),
+                "test/acceptance/resources/",
+                f"{backend_service}.operator.manifest.yaml",
+            ),
+            namespace=ns,
+        )
 
 
 @parse.with_pattern(r'.*')
@@ -309,10 +312,7 @@ def apply_yaml(context):
     if "namespace" in metadata:
         ns = metadata["namespace"]
     else:
-        if "namespace" in context:
-            ns = context.namespace.name
-        else:
-            ns = None
+        ns = context.namespace.name if "namespace" in context else None
     output = openshift.apply(context.text, ns)
     result = re.search(rf'.*{metadata_name}.*(created|unchanged|configured)', output)
     assert result is not None, f"Unable to apply YAML for CR '{metadata_name}': {output}"
@@ -328,10 +328,7 @@ def delete_yaml(context):
     if "namespace" in metadata:
         ns = metadata["namespace"]
     else:
-        if "namespace" in context:
-            ns = context.namespace.name
-        else:
-            ns = None
+        ns = context.namespace.name if "namespace" in context else None
     output = openshift.delete(context.text, ns)
     result = re.search(rf'.*{metadata_name}.*(deleted)', output)
     assert result is not None, f"Unable to delete CR '{metadata_name}': {output}"
@@ -455,11 +452,9 @@ def check_service_account_bound(context, cluster_role_name, cluster_rolebinding_
     assert rolebinding_json["roleRef"]["name"] == cluster_role_name, f"Could not find rolebinding for the role '{cluster_role_name}'"
 
     subjects_list = rolebinding_json["subjects"]
-    subject_found = False
-    for subject in subjects_list:
-        if subject["kind"] == "ServiceAccount" and subject["name"] == sa_name:
-            subject_found = True
-        else:
-            continue
+    subject_found = any(
+        subject["kind"] == "ServiceAccount" and subject["name"] == sa_name
+        for subject in subjects_list
+    )
 
     assert subject_found, f"Could not find rolebinding for the role '{cluster_role_name}'"

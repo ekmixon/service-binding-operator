@@ -26,9 +26,12 @@ class NodeJSApp(App):
         while ((start + interval) <= timeout):
             pod_list = self.openshift.get_pod_lst(self.namespace)
             for pod in pod_list:
-                if re.fullmatch(self.get_pod_name_pattern(), pod) is not None:
-                    if self.openshift.get_pod_status(pod, self.namespace) == "Running":
-                        return pod
+                if (
+                    re.fullmatch(self.get_pod_name_pattern(), pod) is not None
+                    and self.openshift.get_pod_status(pod, self.namespace)
+                    == "Running"
+                ):
+                    return pod
             time.sleep(interval)
             start += interval
         return None
@@ -38,9 +41,13 @@ class NodeJSApp(App):
         while ((start + interval) <= timeout):
             pod_list = self.openshift.get_pod_lst(self.namespace)
             for pod in pod_list:
-                if pod != old_pod_name and re.fullmatch(self.get_pod_name_pattern(), pod) is not None:
-                    if self.openshift.get_pod_status(pod, self.namespace) == "Running":
-                        return pod
+                if (
+                    pod != old_pod_name
+                    and re.fullmatch(self.get_pod_name_pattern(), pod) is not None
+                    and self.openshift.get_pod_status(pod, self.namespace)
+                    == "Running"
+                ):
+                    return pod
             time.sleep(interval)
             start += interval
         return None
@@ -54,9 +61,15 @@ class NodeJSApp(App):
             current_generation = self.get_generation()
             pod_list = self.openshift.get_pod_lst(self.namespace)
             for pod in pod_list:
-                if (current_generation > old_generation) and (re.fullmatch(self.get_pod_name_pattern(), pod) is not None):
-                    if self.openshift.get_pod_status(pod, self.namespace) == "Running":
-                        return pod
+                if (
+                    (current_generation > old_generation)
+                    and (
+                        re.fullmatch(self.get_pod_name_pattern(), pod) is not None
+                    )
+                    and self.openshift.get_pod_status(pod, self.namespace)
+                    == "Running"
+                ):
+                    return pod
             time.sleep(interval)
             start += interval
         return None

@@ -57,10 +57,7 @@ def sbr_is_applied(context):
             context.application_original_generation = context.application.get_generation()
         else:
             assert False, f"Invalid application type in context.application_type={context.application_type}, valid are 'nodejs', 'knative'"
-    if "namespace" in context:
-        ns = context.namespace.name
-    else:
-        ns = None
+    ns = context.namespace.name if "namespace" in context else None
     binding = ServiceBinding(context.text, ns)
     assert binding.create() is not None, "Service binding not created"
     context.bindings[binding.name] = binding
